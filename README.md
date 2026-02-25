@@ -28,6 +28,9 @@ Real-Time Web Interface – Simple Flask-based frontend for interactive analysis
 
 **Frontend**: HTML, CSS, JS
 
+**Database**: SQLite3
+
+
 # Usage
 
 Clone the repo
