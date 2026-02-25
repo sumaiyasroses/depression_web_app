@@ -1,27 +1,50 @@
 import sqlite3
 
+DB_NAME = "database.db"
+
 def init_db():
-    conn = sqlite3.connect("depression.db")
+    conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
 
+    # -------------------------
+    # USERS TABLE
+    # -------------------------
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS Message (
-        message_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        message_text TEXT NOT NULL,
-        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
     """)
 
+    # -------------------------
+    # INTERACTIONS TABLE
+    # -------------------------
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS Analysis_Result (
-        result_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        message_id INTEGER,
-        predicted_label TEXT,
-        risk_score FLOAT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (message_id) REFERENCES Message(message_id)
+    CREATE TABLE IF NOT EXISTS interactions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        message TEXT NOT NULL,
+        sentiment REAL,
+        risk_score REAL,
+        guidance TEXT,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id)
     )
     """)
+
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS ai_chat (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    contact_name TEXT,
+    sender TEXT,
+    message TEXT,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+)
+""")
 
     conn.commit()
     conn.close()

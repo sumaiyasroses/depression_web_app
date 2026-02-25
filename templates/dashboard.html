@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Dashboard</h2>
+
+<!-- your existing dashboard code -->
+
+<h2>Welcome {{ username }}</h2>
+
+<hr>
+
+<h3>Behavioral Insights</h3>
+
+<p><strong>Average Risk Score:</strong> {{ avg_risk }}%</p>
+<p><strong>Late Night Activity:</strong> {{ late_night_ratio }}%</p>
+<p><strong>Behavioral Risk Score:</strong> {{ behavior_risk }}</p>
+
+<hr>
+
+
+<h3>Your Interaction History</h3>
+
+{% for item in history %}
+    <div style="border:1px solid #ccc; padding:10px; margin:10px;">
+        <p><strong>Message:</strong> {{ item[0] }}</p>
+        <p><strong>Sentiment:</strong> {{ item[1] }}</p>
+        <p><strong>Risk Score:</strong> {{ item[2] }}%</p>
+        <p><strong>Guidance:</strong> {{ item[3] }}</p>
+        <p><small>{{ item[4] }}</small></p>
+    </div>
+{% endfor %}
+
+<br>
+<a href="/logout">Logout</a>
+
+{% endblock %}

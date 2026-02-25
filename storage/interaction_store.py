@@ -1,16 +1,42 @@
-# storage/interaction_store.py
+import sqlite3
 
-from collections import defaultdict
+DB_NAME = "database.db"
+
 from datetime import datetime
+import pytz
 
-# Stores user interactions
-user_interactions = defaultdict(list)
+def add_message(user_id, message, sentiment, risk_score, guidance):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
 
-def add_message(user_id, text):
-    user_interactions[user_id].append({
-        "text": text,
-        "time": datetime.now()
-    })
+    # Get IST time properly formatted
+    ist = pytz.timezone("Asia/Kolkata")
+    current_time = datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")
+
+    cursor.execute("""
+        INSERT INTO interactions 
+        (user_id, message, sentiment, risk_score, guidance, timestamp)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (user_id, message, sentiment, risk_score, guidance, current_time))
+
+    conn.commit()
+    conn.close()
+
+
+
 
 def get_user_history(user_id):
-    return user_interactions[user_id]
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT message, sentiment, risk_score, guidance, timestamp
+        FROM interactions
+        WHERE user_id = ?
+        ORDER BY timestamp DESC
+    """, (user_id,))
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    return rows

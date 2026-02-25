@@ -1,112 +1,52 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Depression Risk Analyzer</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4fdf7;
-            margin: 0;
-            padding: 0;
-        }
-
-        .container {
-            width: 60%;
-            margin: 60px auto;
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
-        }
-
-        h1 {
-            color: #1b5e20;
-            text-align: center;
-        }
-
-        textarea {
-            width: 100%;
-            height: 120px;
-            padding: 10px;
-            border-radius: 6px;
-            border: 1px solid #c8e6c9;
-            font-size: 14px;
-            resize: none;
-        }
-
-        button {
-            background-color: #2e7d32;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            margin-top: 15px;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background-color: #1b5e20;
-        }
-
-        .result {
-            margin-top: 25px;
-            padding: 15px;
-            background-color: #e8f5e9;
-            border-left: 5px solid #2e7d32;
-            border-radius: 6px;
-        }
-
-        .risk-low {
-            color: #2e7d32;
-            font-weight: bold;
-        }
-
-        .risk-moderate {
-            color: #f9a825;
-            font-weight: bold;
-        }
-
-        .risk-high {
-            color: #c62828;
-            font-weight: bold;
-        }
-
-        .label {
-            font-weight: bold;
-            color: #1b5e20;
-        }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Depression Risk Analyzer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
+
 <body>
 
 <div class="container">
-    <h1>Depression Risk Analyzer</h1>
 
-    <form method="POST" action="/analyze">
-        <textarea name="message" placeholder="Type your message..."></textarea>
-        <br>
+    <h1>AI Depression Risk Analyzer</h1>
+
+    <form action="/analyze" method="POST">
+        <textarea 
+            name="message" 
+            placeholder="Type how you're feeling..." 
+            required>
+        </textarea>
+
         <button type="submit">Analyze</button>
     </form>
 
-    {% if result %}
-    <div class="result">
-        <p><span class="label">Sentiment:</span> {{ result.sentiment }}</p>
+   {% if risk %}
+<div class="result {{ risk|lower }}">
+    <h3>Risk Level: {{ risk }}</h3>
+    <p>Sentiment: {{ sentiment }}</p>
+    <p>Probability: {{ percentage }}%</p>
 
-        <p><span class="label">Risk Level:</span> 
-            {% if result.risk == "Low" %}
-                <span class="risk-low">{{ result.risk }}</span>
-            {% elif result.risk == "Moderate" %}
-                <span class="risk-moderate">{{ result.risk }}</span>
-            {% else %}
-                <span class="risk-high">{{ result.risk }}</span>
-            {% endif %}
-        </p>
-
-        <p><span class="label">Total Messages:</span> {{ result.message_count }}</p>
-        <p><span class="label">Negative Ratio:</span> {{ result.negative_ratio }}</p>
-        <p><span class="label">Average Sentiment Score:</span> {{ result.avg_sentiment_score }}</p>
+    <div class="progress">
+        <div class="progress-bar" id="bar"></div>
     </div>
-    {% endif %}
+</div>
+
+<script>
+    const percent = parseFloat("{{ percentage }}");
+    const bar = document.getElementById("bar");
+    bar.style.width = percent + "%";
+    bar.textContent = percent + "%";
+</script>
+{% endif %}
+
+
+    <div class="footer">
+        Educational tool only. Not a medical diagnosis.
+    </div>
+
 </div>
 
 </body>
