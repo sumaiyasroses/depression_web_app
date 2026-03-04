@@ -6,11 +6,9 @@
     <h2>🤖 SAFA AI</h2>
 
     <div class="chat-box">
-        {% for chat in chats %}
-            <div class="{{ chat[0] }}">
-               <p>{{ chat[1] }}</p>
-               <small>{{ chat[2] }}</small>
-            </div>
+        {% for sender, message, timestamp in chats %}
+            <p><b>{{ sender }}:</b> {{ message }}</p>
+            <small>{{ timestamp }}</small>
         {% endfor %}
     </div>
 

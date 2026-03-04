@@ -1,50 +1,23 @@
 import sqlite3
 
-DB_NAME = "database.db"
-
 def init_db():
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect("chat.db")
     cursor = conn.cursor()
 
-    # -------------------------
-    # USERS TABLE
-    # -------------------------
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS users (
+    CREATE TABLE IF NOT EXISTS messages (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        sender TEXT,
+        text TEXT
     )
     """)
 
-    # -------------------------
-    # INTERACTIONS TABLE
-    # -------------------------
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS interactions (
+    CREATE TABLE IF NOT EXISTS risk_scores (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        message TEXT NOT NULL,
-        sentiment REAL,
-        risk_score REAL,
-        guidance TEXT,
-        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(user_id) REFERENCES users(id)
+        score REAL
     )
     """)
-
-
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS ai_chat (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER,
-    contact_name TEXT,
-    sender TEXT,
-    message TEXT,
-    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-)
-""")
 
     conn.commit()
     conn.close()

@@ -9,6 +9,12 @@ from storage.interaction_store import add_message, get_user_history
 from behavior.behavior_analyzer import calculate_behavioral_risk
 from nlp.interaction_features import extract_features
 
+from transformers import AutoModelForCausalLM, AutoTokenizer
+import torch
+
+tokenizer = AutoTokenizer.from_pretrained("microsoft/DialoGPT-small")
+model_ai = AutoModelForCausalLM.from_pretrained("microsoft/DialoGPT-small")
+
 model = joblib.load("ml/model.pkl")
 vectorizer = joblib.load("ml/vectorizer.pkl")
 
@@ -290,28 +296,87 @@ def safa_ai():
         message = request.form["message"]
         timestamp = datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")
 
+        # 1️⃣ RUN ML MODEL
+        X = vectorizer.transform([message])
+        prob = model.predict_proba(X)[0][1]
+        risk_score = round(prob * 100, 2)
+
+        behavior_risk = calculate_behavioral_risk(session["user_id"])
+        final_risk = min(risk_score + behavior_risk, 100)
+
+        # 2️⃣ SAVE USER MESSAGE WITH RISK
+        cursor.execute("""
+            INSERT INTO interactions (user_id, message, risk_score, timestamp)
+            VALUES (?, ?, ?, ?)
+        """, (session["user_id"], message, final_risk, timestamp))
+
+        # Also save to ai_chat
         cursor.execute("""
             INSERT INTO ai_chat (user_id, contact_name, sender, message, timestamp)
             VALUES (?, ?, ?, ?, ?)
         """, (session["user_id"], "SAFA", "user", message, timestamp))
 
-        lower_msg = message.lower()
+        # 3️⃣ FETCH LAST 20 MESSAGES FOR CONTEXT
+        cursor.execute("""
+            SELECT sender, message
+            FROM ai_chat
+            WHERE user_id = ? AND contact_name = 'SAFA'
+            ORDER BY id DESC
+            LIMIT 20
+        """, (session["user_id"],))
 
-        if "sad" in lower_msg:
-            reply = "What has been making you feel sad recently?"
-        elif "anxious" in lower_msg:
-            reply = "What usually triggers your anxiety?"
-        elif "angry" in lower_msg:
-            reply = "What happened that made you feel angry?"
-        elif "tired" in lower_msg:
-            reply = "Have you been resting properly lately?"
-        elif lower_msg in ["no", "i dont know", "idk"]:
-            reply = "That’s okay. Sometimes feelings are hard to explain. Can you describe how your day felt?"
-        else:
-            reply = "Can you tell me a little more about that?"
+        previous_messages = cursor.fetchall()
+        previous_messages.reverse()
 
+        # 4️⃣ BUILD BETTER PROMPT
+        conversation = ""
+        for sender, msg in previous_messages:
+            conversation += f"{sender}: {msg}\n"
+
+        system_prompt = (
+            "You are SAFA, a compassionate and emotionally intelligent mental health assistant.\n"
+            "You must:\n"
+            "- Respond empathetically\n"
+            "- Ask one thoughtful follow-up question\n"
+            "- Never ask unrelated questions\n"
+            "- Stay focused on emotional wellbeing\n"
+            "- Be calm and supportive\n\n"
+        )
+
+        prompt = system_prompt + conversation + "SAFA:"
+
+        # 5️⃣ GENERATE CLEANER OUTPUT (LESS RANDOM)
+# Encode input
+        new_input_ids = tokenizer.encode(
+        prompt + tokenizer.eos_token,
+        return_tensors='pt'
+    )
+
+# Generate response
+        bot_output = model_ai.generate(
+            new_input_ids,
+            max_new_tokens=80,
+            pad_token_id=tokenizer.eos_token_id,
+            do_sample=True,
+            top_k=40,
+            top_p=0.9,
+            temperature=0.7
+        )
+
+# Decode response
+        reply = tokenizer.decode(
+            bot_output[0][new_input_ids.shape[-1]:],
+            skip_special_tokens=True
+        )
+
+# Fallback if blank
+        if reply.strip() == "":
+            reply = "I'm here with you. Can you tell me more about how you're feeling?"        
+        
+        print("AI REPLY:", reply)
         reply_time = datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")
 
+        # 6️⃣ SAVE AI REPLY
         cursor.execute("""
             INSERT INTO ai_chat (user_id, contact_name, sender, message, timestamp)
             VALUES (?, ?, ?, ?, ?)
@@ -319,6 +384,7 @@ def safa_ai():
 
         conn.commit()
 
+    # FETCH FULL CHAT HISTORY
     cursor.execute("""
         SELECT sender, message, timestamp
         FROM ai_chat
