@@ -1,7 +1,7 @@
 import sqlite3
 
 def init_db():
-    conn = sqlite3.connect("chat.db")
+    conn = sqlite3.connect("database.db")
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -17,6 +17,14 @@ def init_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         score REAL
     )
+    """)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS posts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        content TEXT,
+        timestamp TEXT
+        )
     """)
 
     conn.commit()
