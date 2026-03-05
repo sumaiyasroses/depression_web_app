@@ -3,34 +3,112 @@
 
 <h2>Dashboard</h2>
 
-<!-- your existing dashboard code -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <h2>Welcome {{ username }}</h2>
 
 <hr>
 
+<h2>Behavior Analytics</h2>
+
+<div style="width:900px; margin:auto;">
+    <canvas id="riskChart"></canvas>
+</div>
+
+<div style="width:400px; margin:40px auto;">
+    <canvas id="sleepChart"></canvas>
+</div>
+
 <h3>Behavioral Insights</h3>
 
+<p><strong>Total Interactions Analyzed:</strong> {{ total_interactions }}</p>
 <p><strong>Average Risk Score:</strong> {{ avg_risk }}%</p>
 <p><strong>Late Night Activity:</strong> {{ late_night_ratio }}%</p>
 <p><strong>Behavioral Risk Score:</strong> {{ behavior_risk }}</p>
+<p><strong>Risk Level:</strong> {{ risk_level }}</p>
+<p><strong>Analysis Summary:</strong> {{ analysis_summary }}</p>
+<p><strong>Guidance:</strong> {{ guidance }}</p>
 
 <hr>
 
+<script>
 
-<h3>Your Interaction History</h3>
+const dates = JSON.parse('{{ dates | tojson | safe }}');
+const riskValues = JSON.parse('{{ risk_values | tojson | safe }}');
 
-{% for item in history %}
-    <div style="border:1px solid #ccc; padding:10px; margin:10px;">
-        <p><strong>Message:</strong> {{ item[0] }}</p>
-        <p><strong>Sentiment:</strong> {{ item[1] }}</p>
-        <p><strong>Risk Score:</strong> {{ item[2] }}%</p>
-        <p><strong>Guidance:</strong> {{ item[3] }}</p>
-        <p><small>{{ item[4] }}</small></p>
-    </div>
-{% endfor %}
+const formattedDates = dates.map(function(d){
+    const date = new Date(d);
+    return date.toLocaleDateString();
+});
 
+const ctx = document.getElementById("riskChart").getContext("2d");
+
+new Chart(ctx, {
+    type: "line",
+    data: {
+        labels: formattedDates,
+        datasets: [{
+            label: "Depression Risk Trend",
+            data: riskValues,
+            fill: true,
+            borderWidth: 3,
+            tension: 0.4,
+            pointRadius: 4
+        }]
+    },
+    options: {
+    responsive: true,
+    plugins: {
+        title: {
+            display: true,
+            text: "Depression Risk Trend Over Time"
+        }
+    },
+    scales: {
+        y: {
+            min: 0,
+            max: 100,
+            title: {
+                display: true,
+                text: "Risk Score (%)"
+            }
+        },
+        x: {
+            title: {
+                display: true,
+                text: "Interaction Date"
+            }
+        }
+    }
+}
+});
+
+const night = JSON.parse('{{ late_night_percent | tojson | safe }}');
+const day = JSON.parse('{{ day_percent | tojson | safe }}');
+
+const sleepCtx = document.getElementById("sleepChart").getContext("2d");
+
+new Chart(sleepCtx, {
+    type: "doughnut",
+    data: {
+        labels: ["Late Night Activity","Day Activity"],
+        datasets: [{
+            data: [night, day]
+        }]
+    },
+    options: {
+    plugins: {
+        title: {
+            display: true,
+            text: "Late Night Activity Analysis"
+        }
+    }
+}
+});
+
+</script>
 <br>
+
 <a href="/logout">Logout</a>
 
 {% endblock %}

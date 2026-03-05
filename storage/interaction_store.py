@@ -13,7 +13,7 @@ def get_user_history(user_id):
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT message, risk_score, timestamp
+        SELECT message,sentiment, risk_score, guidance, timestamp
         FROM interactions
         WHERE user_id = ?
         ORDER BY timestamp ASC

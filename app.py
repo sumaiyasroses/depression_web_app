@@ -7,7 +7,12 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from database import init_db
 from storage.interaction_store import add_message, get_user_history
 from behavior.behavior_analyzer import calculate_behavioral_risk
-from nlp.interaction_features import extract_features
+from nlp.post_analyzer import analyze_user_posts
+from nlp.interaction_features import (
+    get_user_activity,
+    calculate_late_night_usage,
+    calculate_behavioral_risk
+)
 
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
@@ -125,6 +130,14 @@ def dashboard():
     cursor = conn.cursor()
 
     cursor.execute("""
+        SELECT COUNT(*)
+        FROM interactions
+        WHERE user_id = ?
+    """, (user_id,))
+
+    total_interactions = cursor.fetchone()[0]
+
+    cursor.execute("""
         SELECT AVG(risk_score)
         FROM interactions
         WHERE user_id = ?
@@ -136,8 +149,61 @@ def dashboard():
         avg_risk = round(avg_risk, 2)
     else:
         avg_risk = 0
+    if avg_risk < 30:
+        risk_level = "Low Risk"
+
+    elif avg_risk < 60:
+        risk_level = "Moderate Risk"
+
+    else:
+        risk_level = "High Risk"
+
+    if risk_level == "Low Risk":
+        analysis_summary = "Your recent interactions show generally stable emotional patterns."
+        guidance = "Maintain healthy routines, stay socially connected, and continue positive activities."
+
+    elif risk_level == "Moderate Risk":
+        analysis_summary = "Some emotional distress patterns were detected in recent interactions."
+        guidance = "Consider taking breaks, improving sleep habits, and talking with supportive friends or family."
+
+    else:
+        analysis_summary = "Strong indicators of emotional distress were detected in recent interactions."
+        guidance = "Consider reaching out to trusted people or a mental health professional for support."
+
+
+    cursor.execute("""
+        SELECT timestamp, risk_score
+        FROM interactions
+        WHERE user_id = ?
+        ORDER BY timestamp ASC
+        """, (user_id,))
+
+    rows = cursor.fetchall()
+
+    dates = [r[0] for r in rows]
+    risk_values = [r[1] for r in rows]
+
+    cursor.execute("""
+    SELECT timestamp, risk_score
+    FROM interactions
+    WHERE user_id = ?
+    ORDER BY timestamp
+""", (user_id,))
+
+    rows = cursor.fetchall()
+
+    dates = []
+    risk_values = []
+
+    for row in rows:
+        dates.append(row[0])
+        risk_values.append(row[1])
+
+    late_night_percent = round(late_night_ratio * 100, 2)
+    day_percent = 100 - late_night_percent
 
     conn.close()
+
 
     return render_template(
         "dashboard.html",
@@ -145,7 +211,15 @@ def dashboard():
         history=history,
         late_night_ratio=round(late_night_ratio * 100, 2),
         behavior_risk=behavior_risk,
-        avg_risk=avg_risk
+        avg_risk=avg_risk,
+        risk_level=risk_level,
+        analysis_summary=analysis_summary,
+        guidance=guidance,
+        total_interactions=total_interactions,
+        dates=dates,
+        risk_values=risk_values,
+        late_night_percent=late_night_percent,
+        day_percent=day_percent,
 
     )
 
@@ -172,7 +246,9 @@ def analyze():
 
     behavior_risk = calculate_behavioral_risk(session["user_id"])
 
-    final_risk = min(risk_score + behavior_risk, 100)
+    post_risk = analyze_user_posts(session["user_id"])
+
+    final_risk = min(risk_score + behavior_risk + post_risk, 100)
     
 
     guidance = "Practice self-care and consider talking to someone you trust."
@@ -188,8 +264,12 @@ def analyze():
     return redirect(url_for("dashboard"))
 
 
+# -------------------------
+# CHATS-----------------
+# -------------------------
 @app.route("/chats", methods=["GET", "POST"])
 def chats():
+
     if "user_id" not in session:
         return redirect(url_for("login"))
 
@@ -202,41 +282,49 @@ def chats():
     cursor = conn.cursor()
 
     ist = pytz.timezone("Asia/Kolkata")
+
     contact = request.args.get("contact")
 
+    chats = []
+    contacts_list = []
+
+    # -----------------------------
+    # HANDLE MESSAGE SEND
+    # -----------------------------
     if request.method == "POST":
+
         contact = request.form["contact"]
         message = request.form["message"]
-        user_msg = message.lower()
-        timestamp = datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")
-        if "pm" in user_msg or "am" in user_msg:
-            reply = "Thanks for clarifying the time 😊 What’s on your mind?"
-        elif "hi" in user_msg:
-            reply = "Hey. How are you feeling today?"
-        else:
-             reply = "Can you tell me a bit more about that?"
 
+        timestamp = datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")
 
         # Save user message
         cursor.execute("""
-            INSERT INTO ai_chat 
+            INSERT INTO ai_chat
             (user_id, contact_name, sender, message, timestamp)
             VALUES (?, ?, ?, ?, ?)
         """, (session["user_id"], contact, "user", message, timestamp))
 
+
+        # -----------------------------
+        # AUTO REPLIES
+        # -----------------------------
         auto_replies = {
+
             "Aisha": [
                 "Are you okay?",
                 "You sound different today...",
                 "Did something happen?",
                 "I'm here if you want to talk ❤️"
             ],
+
             "Rahul": [
                 "Bro you good?",
                 "Why so quiet lately?",
                 "Call me if you need.",
                 "Don't overthink too much."
             ],
+
             "Sara": [
                 "Did you eat?",
                 "Why are you awake this late?",
@@ -246,37 +334,72 @@ def chats():
         }
 
         if contact in auto_replies:
+
             reply = random.choice(auto_replies[contact])
+
             reply_time = datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")
 
             cursor.execute("""
-                INSERT INTO ai_chat 
+                INSERT INTO ai_chat
                 (user_id, contact_name, sender, message, timestamp)
                 VALUES (?, ?, ?, ?, ?)
             """, (session["user_id"], contact, "contact", reply, reply_time))
 
         conn.commit()
 
+
+    # -----------------------------
+    # LOAD CONTACT LIST
+    # -----------------------------
+    cursor.execute("""
+        SELECT contact_name, message, timestamp
+        FROM ai_chat
+        WHERE user_id = ?
+        ORDER BY timestamp DESC
+    """, (session["user_id"],))
+
+    rows = cursor.fetchall()
+
+    contacts = {}
+
+    for name, message, timestamp in rows:
+
+        if name not in contacts:
+
+            contacts[name] = {
+                "last_message": message,
+                "timestamp": timestamp
+            }
+
+    contacts_list = [
+        (name, data["last_message"], data["timestamp"])
+        for name, data in contacts.items()
+    ]
+
+
+    # -----------------------------
+    # LOAD CHAT MESSAGES
+    # -----------------------------
     if contact:
+
         cursor.execute("""
             SELECT contact_name, sender, message, timestamp
             FROM ai_chat
             WHERE user_id = ? AND contact_name = ?
             ORDER BY timestamp ASC
         """, (session["user_id"], contact))
+
         chats = cursor.fetchall()
-    else:
-        cursor.execute("""
-            SELECT DISTINCT contact_name
-            FROM ai_chat
-            WHERE user_id = ?
-        """, (session["user_id"],))
-        chats = cursor.fetchall()
+
 
     conn.close()
-    return render_template("chats.html", chats=chats, selected_contact=contact)
 
-
+    return render_template(
+        "chats.html",
+        contacts=contacts_list,
+        chats=chats,
+        selected_contact=contact
+    )
 
 @app.route("/safa_ai", methods=["GET", "POST"])
 def safa_ai():

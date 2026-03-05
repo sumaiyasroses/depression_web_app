@@ -1,42 +1,77 @@
-# nlp/interaction_features.py
+import sqlite3
+from datetime import datetime
 
-from nlp.analyzer import analyze_text
+def get_user_activity(user_id):
 
-# nlp/interaction_features.py
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
 
-def extract_features(history):
-    sentiments = []
-    scores = []
-    late_night_count = 0
+    cursor.execute("""
+        SELECT timestamp
+        FROM ai_chat
+        WHERE user_id = ?
+    """, (user_id,))
 
-    for row in history:
-        message, sentiment, risk_score, guidance, timestamp = row
+    rows = cursor.fetchall()
+    conn.close()
 
-        scores.append(risk_score)
+    timestamps = []
 
-        if sentiment == "Negative":
-            sentiments.append(1)
-        else:
-            sentiments.append(0)
+    for r in rows:
+        timestamps.append(r[0])
 
-        # Check late night (after 11 PM)
-        hour = int(timestamp.split(" ")[1].split(":")[0])
-        if hour >= 23 or hour <= 4:
-            late_night_count += 1
+    return timestamps
 
-    if len(scores) == 0:
-        return {
-            "avg_risk_score": 0,
-            "negative_ratio": 0,
-            "message_count": 0,
-            "late_night_ratio": 0
-        }
 
-    features = {
-        "avg_risk_score": sum(scores) / len(scores),
-        "negative_ratio": sum(sentiments) / len(sentiments),
-        "message_count": len(history),
-        "late_night_ratio": late_night_count / len(history)
-    }
+def calculate_late_night_usage(timestamps):
 
-    return features
+    if not timestamps:
+        return 0
+
+    late = 0
+
+    for ts in timestamps:
+        dt = datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")
+
+        if dt.hour >= 23 or dt.hour <= 4:
+            late += 1
+
+    return late / len(timestamps)
+
+
+def calculate_behavioral_risk(user_id):
+
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT message
+        FROM ai_chat
+        WHERE user_id = ?
+    """, (user_id,))
+
+    messages = cursor.fetchall()
+    conn.close()
+
+    risk = 0
+
+    keywords = [
+        "tired",
+        "exhausted",
+        "sad",
+        "alone",
+        "lonely",
+        "stressed",
+        "worthless",
+        "empty",
+        "hopeless"
+    ]
+
+    for m in messages:
+        text = m[0].lower()
+
+        for k in keywords:
+            if k in text:
+                risk += 1
+
+    return min(risk, 40)
