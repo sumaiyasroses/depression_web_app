@@ -1,21 +1,170 @@
 {% extends "base.html" %}
-
 {% block content %}
 
-<div class="container">
-    <h2>🤖 SAFA AI</h2>
+<style>
 
-    <div class="chat-box">
-        {% for sender, message, timestamp in chats %}
-            <p><b>{{ sender }}:</b> {{ message }}</p>
-            <small>{{ timestamp }}</small>
-        {% endfor %}
-    </div>
+:root{
+--violet:#7c3aed;
+--bg:#f7f5ff;
+}
 
-    <form method="POST">
-        <input type="text" name="message" placeholder="Tell me how you feel..." required>
-        <button type="submit">Send</button>
-    </form>
+/* PAGE CENTER */
+
+.analyzer-wrapper{
+display:flex;
+justify-content:center;
+align-items:center;
+height:calc(100vh - 80px);
+background:var(--bg);
+}
+
+/* CARD */
+
+.card{
+background:white;
+padding:40px;
+width:520px;
+border-radius:18px;
+box-shadow:0 15px 40px rgba(124,58,237,0.15);
+text-align:center;
+}
+
+/* TITLE */
+
+.card h1{
+color:var(--violet);
+margin-bottom:10px;
+}
+
+.subtitle{
+color:#777;
+margin-bottom:25px;
+}
+
+/* TEXTAREA */
+
+textarea{
+width:100%;
+height:120px;
+padding:15px;
+border-radius:12px;
+border:1px solid #ddd;
+resize:none;
+}
+
+/* BUTTON */
+
+button{
+margin-top:20px;
+padding:12px 30px;
+border:none;
+background:var(--violet);
+color:white;
+border-radius:10px;
+cursor:pointer;
+}
+
+/* RESULT */
+
+.result{
+margin-top:25px;
+padding:18px;
+border-radius:12px;
+}
+
+.high{
+background:#ffe5f1;
+color:#c2185b;
+}
+
+.low{
+background:#e8f8f5;
+color:#0f766e;
+}
+
+/* PROGRESS */
+
+.progress{
+background:#eee;
+border-radius:10px;
+margin-top:10px;
+height:20px;
+overflow:hidden;
+}
+
+.progress-bar{
+background:#7c3aed;
+height:100%;
+color:white;
+font-size:12px;
+display:flex;
+align-items:center;
+justify-content:center;
+}
+
+.footer{
+margin-top:20px;
+font-size:12px;
+color:#888;
+}
+
+</style>
+
+
+<div class="analyzer-wrapper">
+
+<div class="card">
+
+<h1>Safa AI Depression Detector</h1>
+<p class="subtitle">AI emotional analysis</p>
+
+<form method="POST">
+
+<textarea name="text" placeholder="Type how you feel..." required></textarea>
+
+<br>
+
+<button type="submit">Analyze</button>
+
+</form>
+
+
+{% if result %}
+
+<div class="result {{ risk_class }}">
+
+<h3>{{ result }}</h3>
+
+<p>Probability: {{ probability }}%</p>
+
+<div class="progress">
+
+<div class="progress-bar"
+     data-width="{{ probability }}">
+
+{{ probability }}%
+
 </div>
+
+</div>
+
+</div>
+
+{% endif %}
+
+<div class="footer">
+Educational tool only – not medical diagnosis
+</div>
+
+</div>
+
+</div>
+
+<script>
+const bar = document.querySelector(".progress-bar");
+if(bar){
+bar.style.width = bar.dataset.width + "%";
+}
+</script>
 
 {% endblock %}
