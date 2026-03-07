@@ -1,114 +1,360 @@
 {% extends "base.html" %}
 {% block content %}
 
-<h2>Dashboard</h2>
-
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<h2>Welcome {{ username }}</h2>
+<style>
 
-<hr>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+*::before, *::after { box-sizing: border-box; }
 
-<h2>Behavior Analytics</h2>
+body {
+    font-family: 'DM Sans', sans-serif;
+    background: #f0f0f0;
+    color: #111;
+    min-height: 100vh;
+}
 
-<div style="width:900px; margin:auto;">
-    <canvas id="riskChart"></canvas>
+.dashboard {
+    padding: 24px 28px 48px;
+    width: 100%;
+}
+
+.dash-header {
+    margin-bottom: 20px;
+}
+.dash-header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #111;
+    letter-spacing: -0.3px;
+}
+.dash-header p {
+    font-size: 11px;
+    color: #999;
+    margin-top: 2px;
+    font-family: 'DM Mono', monospace;
+}
+.dash-header span { color: #7c3aed; font-weight: 600; }
+
+.section-title {
+    font-size: 10px;
+    font-weight: 600;
+    color: #bbb;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+}
+
+/* ── Stat cards + everything uses same grid ── */
+.content-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+.stat-card {
+    background: #fff;
+    border: 1px solid #e8e8e8;
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.stat-label {
+    font-size: 9px;
+    color: #aaa;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+}
+.stat-value {
+    font-size: 20px;
+    font-weight: 600;
+    color: #111;
+    font-family: 'DM Mono', monospace;
+    line-height: 1;
+}
+.stat-value.accent { color: #7c3aed; }
+.stat-sub {
+    font-size: 9px;
+    color: #ccc;
+    font-family: 'DM Mono', monospace;
+}
+.risk-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 600;
+    font-family: 'DM Mono', monospace;
+    background: #ede9fe;
+    color: #7c3aed;
+}
+
+/* ── Charts row: same grid, chart cards span 2 cols each ── */
+.charts-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+.chart-card {
+    grid-column: span 2;
+    background: #fff;
+    border: 1px solid #e8e8e8;
+    border-radius: 10px;
+    padding: 16px 18px;
+    min-width: 0;
+}
+
+.card-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #111;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+.card-title::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #7c3aed;
+    flex-shrink: 0;
+}
+
+/* Canvas containers — fixed equal height */
+.chart-wrap {
+    width: 100%;
+    height: 220px;
+    position: relative;
+}
+
+/* ── Insights card: full width ── */
+.insights-card {
+    background: #fff;
+    border: 1px solid #e8e8e8;
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+}
+
+.insight-row {
+    padding: 9px 0;
+    border-bottom: 1px solid #f5f5f5;
+    display: flex;
+    gap: 16px;
+}
+.insight-row:last-child { border-bottom: none; }
+.insight-key {
+    font-size: 10px;
+    color: #aaa;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    min-width: 150px;
+    padding-top: 1px;
+}
+.insight-val {
+    font-size: 12px;
+    color: #333;
+    line-height: 1.5;
+    flex: 1;
+}
+
+.logout-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 16px;
+    background: #fff;
+    border: 1px solid #e8e8e8;
+    border-radius: 8px;
+    font-size: 12px;
+    font-family: 'DM Sans', sans-serif;
+    color: #666;
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+}
+.logout-btn:hover {
+    background: #fef2f2;
+    color: #dc2626;
+    border-color: #fecaca;
+}
+
+</style>
+
+<div class="dashboard">
+
+    <div class="dash-header">
+        <h1>Dashboard</h1>
+        <p>Welcome back, <span>{{ username }}</span></p>
+    </div>
+
+    <div class="section-title">Overview</div>
+    <div class="content-grid">
+        <div class="stat-card">
+            <div class="stat-label">Interactions</div>
+            <div class="stat-value">{{ total_interactions }}</div>
+            <div class="stat-sub">total analyzed</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Avg Risk Score</div>
+            <div class="stat-value accent">{{ avg_risk }}%</div>
+            <div class="stat-sub">depression risk</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Late Night</div>
+            <div class="stat-value">{{ late_night_ratio }}%</div>
+            <div class="stat-sub">of activity</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Risk Level</div>
+            <div class="stat-value" style="font-size:13px; padding-top:3px;">
+                <span class="risk-badge">{{ risk_level }}</span>
+            </div>
+            <div class="stat-sub">score: {{ behavior_risk }}</div>
+        </div>
+    </div>
+
+    <div class="section-title">Behavior Analytics</div>
+    <div class="charts-grid">
+        <div class="chart-card">
+            <div class="card-title">Depression Risk Trend</div>
+            <div class="chart-wrap">
+                <canvas id="riskChart"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <div class="card-title">Activity Split</div>
+            <div class="chart-wrap">
+                <canvas id="sleepChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="section-title">Behavioral Insights</div>
+    <div class="insights-card">
+        <div class="insight-row">
+            <div class="insight-key">Analysis Summary</div>
+            <div class="insight-val">{{ analysis_summary }}</div>
+        </div>
+        <div class="insight-row">
+            <div class="insight-key">Guidance</div>
+            <div class="insight-val">{{ guidance }}</div>
+        </div>
+    </div>
+
+    <a href="/logout" class="logout-btn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        Logout
+    </a>
+
 </div>
-
-<div style="width:400px; margin:40px auto;">
-    <canvas id="sleepChart"></canvas>
-</div>
-
-<h3>Behavioral Insights</h3>
-
-<p><strong>Total Interactions Analyzed:</strong> {{ total_interactions }}</p>
-<p><strong>Average Risk Score:</strong> {{ avg_risk }}%</p>
-<p><strong>Late Night Activity:</strong> {{ late_night_ratio }}%</p>
-<p><strong>Behavioral Risk Score:</strong> {{ behavior_risk }}</p>
-<p><strong>Risk Level:</strong> {{ risk_level }}</p>
-<p><strong>Analysis Summary:</strong> {{ analysis_summary }}</p>
-<p><strong>Guidance:</strong> {{ guidance }}</p>
-
-<hr>
 
 <script>
-
 const dates = JSON.parse('{{ dates | tojson | safe }}');
 const riskValues = JSON.parse('{{ risk_values | tojson | safe }}');
+const formattedDates = dates.map(d => new Date(d).toLocaleDateString());
 
-const formattedDates = dates.map(function(d){
-    const date = new Date(d);
-    return date.toLocaleDateString();
-});
+const purple = '#7c3aed';
+const purpleLight = 'rgba(124,58,237,0.08)';
 
-const ctx = document.getElementById("riskChart").getContext("2d");
-
-new Chart(ctx, {
+new Chart(document.getElementById("riskChart"), {
     type: "line",
     data: {
         labels: formattedDates,
         datasets: [{
-            label: "Depression Risk Trend",
             data: riskValues,
             fill: true,
-            borderWidth: 3,
+            borderColor: purple,
+            backgroundColor: purpleLight,
+            borderWidth: 2,
             tension: 0.4,
-            pointRadius: 4
+            pointRadius: 2.5,
+            pointBackgroundColor: purple,
+            pointBorderColor: '#fff',
+            pointBorderWidth: 1.5
         }]
     },
     options: {
-    responsive: true,
-    plugins: {
-        title: {
-            display: true,
-            text: "Depression Risk Trend Over Time"
-        }
-    },
-    scales: {
-        y: {
-            min: 0,
-            max: 100,
-            title: {
-                display: true,
-                text: "Risk Score (%)"
-            }
-        },
-        x: {
-            title: {
-                display: true,
-                text: "Interaction Date"
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+            y: {
+                min: 0, max: 100,
+                grid: { color: '#f5f5f5' },
+                border: { display: false },
+                ticks: {
+                    font: { family: 'DM Mono', size: 9 },
+                    color: '#ccc',
+                    callback: v => v + '%',
+                    maxTicksLimit: 6
+                }
+            },
+            x: {
+                grid: { display: false },
+                border: { display: false },
+                ticks: {
+                    font: { family: 'DM Mono', size: 9 },
+                    color: '#ccc',
+                    maxRotation: 40,
+                    maxTicksLimit: 8
+                }
             }
         }
     }
-}
 });
 
 const night = JSON.parse('{{ late_night_percent | tojson | safe }}');
 const day = JSON.parse('{{ day_percent | tojson | safe }}');
 
-const sleepCtx = document.getElementById("sleepChart").getContext("2d");
-
-new Chart(sleepCtx, {
+new Chart(document.getElementById("sleepChart"), {
     type: "doughnut",
     data: {
-        labels: ["Late Night Activity","Day Activity"],
+        labels: ["Late Night", "Day Activity"],
         datasets: [{
-            data: [night, day]
+            data: [night, day],
+            backgroundColor: ['#7c3aed', '#a78bfa'],
+            borderColor: ['#fff', '#fff'],
+            borderWidth: 3,
+            hoverOffset: 3
         }]
     },
     options: {
-    plugins: {
-        title: {
-            display: true,
-            text: "Late Night Activity Analysis"
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '65%',
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: {
+                    font: { family: 'DM Sans', size: 10 },
+                    color: '#888',
+                    padding: 10,
+                    usePointStyle: true,
+                    pointStyleWidth: 6
+                }
+            }
         }
     }
-}
 });
-
 </script>
-<br>
-
-<a href="/logout">Logout</a>
 
 {% endblock %}
