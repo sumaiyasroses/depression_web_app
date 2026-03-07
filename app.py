@@ -401,8 +401,14 @@ def chats():
         selected_contact=contact
     )
 
+# -------------------------
+# SAFA AI-----------------
+# -------------------------
+
+
 @app.route("/safa_ai", methods=["GET", "POST"])
 def safa_ai():
+
     if "user_id" not in session:
         return redirect(url_for("login"))
 
@@ -414,70 +420,87 @@ def safa_ai():
     cursor = conn.cursor()
 
     ist = pytz.timezone("Asia/Kolkata")
+    user_id = session["user_id"]
 
+    # Insert first AI message if chat is empty
+    cursor.execute("""
+        SELECT COUNT(*) FROM ai_chat
+        WHERE user_id=? AND contact_name='SAFA'
+    """, (user_id,))
+    count = cursor.fetchone()[0]
+
+    if count == 0:
+        first_message = "Hi, I'm SAFA. I'm here to listen. How have you been feeling lately?"
+        cursor.execute("""
+            INSERT INTO ai_chat (user_id, contact_name, sender, message, timestamp)
+            VALUES (?, ?, ?, ?, ?)
+        """, (user_id, "SAFA", "ai", first_message,
+              datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")))
+        conn.commit()
+
+    # Handle user message
     if request.method == "POST":
+
         message = request.form["message"]
         timestamp = datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")
 
-        # 1️⃣ RUN ML MODEL
+        # ML prediction
         X = vectorizer.transform([message])
         prob = model.predict_proba(X)[0][1]
         risk_score = round(prob * 100, 2)
 
-        behavior_risk = calculate_behavioral_risk(session["user_id"])
+        behavior_risk = calculate_behavioral_risk(user_id)
         final_risk = min(risk_score + behavior_risk, 100)
 
-        # 2️⃣ SAVE USER MESSAGE WITH RISK
+        # Save to interactions
         cursor.execute("""
             INSERT INTO interactions (user_id, message, risk_score, timestamp)
             VALUES (?, ?, ?, ?)
-        """, (session["user_id"], message, final_risk, timestamp))
+        """, (user_id, message, final_risk, timestamp))
 
-        # Also save to ai_chat
+        # Save user message
         cursor.execute("""
             INSERT INTO ai_chat (user_id, contact_name, sender, message, timestamp)
             VALUES (?, ?, ?, ?, ?)
-        """, (session["user_id"], "SAFA", "user", message, timestamp))
+        """, (user_id, "SAFA", "user", message, timestamp))
 
-        # 3️⃣ FETCH LAST 20 MESSAGES FOR CONTEXT
+        conn.commit()
+
+        # Fetch last 20 messages
         cursor.execute("""
             SELECT sender, message
             FROM ai_chat
-            WHERE user_id = ? AND contact_name = 'SAFA'
+            WHERE user_id=? AND contact_name='SAFA'
             ORDER BY id DESC
             LIMIT 20
-        """, (session["user_id"],))
+        """, (user_id,))
+        history = cursor.fetchall()
+        history.reverse()
 
-        previous_messages = cursor.fetchall()
-        previous_messages.reverse()
-
-        # 4️⃣ BUILD BETTER PROMPT
         conversation = ""
-        for sender, msg in previous_messages:
-            conversation += f"{sender}: {msg}\n"
+        for sender, msg in history:
+            if sender == "user":
+                conversation += f"User: {msg}\n"
+            else:
+                conversation += f"SAFA: {msg}\n"
 
-        system_prompt = (
-            "You are SAFA, a compassionate and emotionally intelligent mental health assistant.\n"
-            "You must:\n"
-            "- Respond empathetically\n"
-            "- Ask one thoughtful follow-up question\n"
-            "- Never ask unrelated questions\n"
-            "- Stay focused on emotional wellbeing\n"
-            "- Be calm and supportive\n\n"
-        )
+        system_prompt = """
+You are SAFA, a compassionate AI mental health assistant.
 
-        prompt = system_prompt + conversation + "SAFA:"
+Rules:
+- Be empathetic and supportive
+- Keep replies short (1–2 sentences)
+- Ask one gentle follow-up question
+- Focus on emotional wellbeing
+"""
 
-        # 5️⃣ GENERATE CLEANER OUTPUT (LESS RANDOM)
-# Encode input
-        new_input_ids = tokenizer.encode(
-        prompt + tokenizer.eos_token,
-        return_tensors='pt'
-    )
+        prompt = system_prompt + "\n" + conversation + "SAFA:"
 
-# Generate response
-        bot_output = model_ai.generate(
-            new_input_ids,
+        # Generate AI reply
+        input_ids = tokenizer.encode(prompt + tokenizer.eos_token, return_tensors="pt")
+
+        output = model_ai.generate(
+            input_ids,
             max_new_tokens=80,
             pad_token_id=tokenizer.eos_token_id,
             do_sample=True,
@@ -486,39 +509,97 @@ def safa_ai():
             temperature=0.7
         )
 
-# Decode response
         reply = tokenizer.decode(
-            bot_output[0][new_input_ids.shape[-1]:],
+            output[0][input_ids.shape[-1]:],
             skip_special_tokens=True
-        )
+        ).strip()
 
-# Fallback if blank
-        if reply.strip() == "":
-            reply = "I'm here with you. Can you tell me more about how you're feeling?"        
-        
-        print("AI REPLY:", reply)
-        reply_time = datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")
+        if reply == "":
+            reply = "I'm here with you. Can you tell me more about how you're feeling?"
 
-        # 6️⃣ SAVE AI REPLY
+        # Save AI reply
         cursor.execute("""
             INSERT INTO ai_chat (user_id, contact_name, sender, message, timestamp)
             VALUES (?, ?, ?, ?, ?)
-        """, (session["user_id"], "SAFA", "ai", reply, reply_time))
+        """, (user_id, "SAFA", "ai", reply,
+              datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")))
 
         conn.commit()
 
-    # FETCH FULL CHAT HISTORY
+    # Fetch full chat
     cursor.execute("""
         SELECT sender, message, timestamp
         FROM ai_chat
-        WHERE user_id = ? AND contact_name = 'SAFA'
+        WHERE user_id=? AND contact_name='SAFA'
         ORDER BY timestamp ASC
-    """, (session["user_id"],))
+    """, (user_id,))
 
     chats = cursor.fetchall()
+
     conn.close()
 
-    return render_template("safa_ai.html", chats=chats)
+    return render_template("safa_ai.html", messages=chats)
+
+# -------------------------
+# SAFA AI CHAT ANALYSIS
+# -------------------------
+
+@app.route("/analyze_conversation", methods=["POST"])
+def analyze_conversation():
+
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    import sqlite3
+
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+
+    user_id = session["user_id"]
+
+    cursor.execute("""
+        SELECT message
+        FROM ai_chat
+        WHERE user_id=? AND contact_name='SAFA' AND sender='user'
+    """, (user_id,))
+
+    rows = cursor.fetchall()
+
+    if not rows:
+        conn.close()
+        return redirect(url_for("safa_ai"))
+
+    full_text = " ".join([r[0] for r in rows])
+
+    X = vectorizer.transform([full_text])
+    prob = model.predict_proba(X)[0][1]
+
+    risk_score = round(prob * 100, 2)
+
+    behavior_risk = calculate_behavioral_risk(user_id)
+    post_risk = analyze_user_posts(user_id)
+
+    final_risk = min(risk_score + behavior_risk + post_risk, 100)
+
+    if final_risk > 70:
+        level = "High Risk"
+        risk_class = "high"
+    elif final_risk > 40:
+        level = "Moderate Risk"
+        risk_class = "moderate"
+    else:
+        level = "Low Risk"
+        risk_class = "low"
+
+    conn.close()
+
+    return render_template(
+        "analysis_result.html",
+        risk=final_risk,
+        level=level,
+        risk_class=risk_class
+    )
+
 
 if __name__ == "__main__":
     init_db()
