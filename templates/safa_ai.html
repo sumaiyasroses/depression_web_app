@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700&family=Lora:wght@600&display=swap');
+
+  :root {
+    --violet: #7c3aed;
+    --violet-light: #ede9fe;
+    --violet-dark: #5b21b6;
+    --bg: #f7f5ff;
+    --text: #1e1b4b;
+    --border: #ddd6fe;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Nunito', sans-serif; overflow: hidden; }
+
+  /* FULL SCREEN — no centering, just fill everything */
+  .safa-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 60px);
+    background: var(--bg);
+  }
+
+  /* CARD fills full width and height */
+  .card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: white;
+    overflow: hidden;
+  }
+
+  /* HEADER */
+  .card-header {
+    background: linear-gradient(135deg, var(--violet-dark), var(--violet));
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  .header-info h1 {
+    font-family: 'Lora', serif;
+    color: white;
+    font-size: 16px;
+  }
+
+  .header-info p {
+    color: #c4b5fd;
+    font-size: 11px;
+    margin-top: 1px;
+  }
+
+  .online-dot {
+    width: 9px; height: 9px;
+    background: #4ade80;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 5px;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .new-chat-btn {
+    background: rgba(255,255,255,0.15);
+    border: 1.5px solid rgba(255,255,255,0.4);
+    color: white;
+    padding: 5px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'Nunito', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: background 0.2s;
+  }
+
+  .new-chat-btn:hover {
+    background: rgba(255,255,255,0.28);
+    color: white;
+  }
+
+  /* CHAT BOX — takes all remaining space */
+  .chat-box {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 32px;
+    background: #faf9ff;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .chat-box::-webkit-scrollbar { width: 4px; }
+  .chat-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+
+  /* MESSAGES */
+  .msg-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .msg-row.user { flex-direction: row-reverse; }
+
+  .avatar {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+    background: var(--violet-light);
+  }
+
+  .msg {
+    padding: 9px 14px;
+    border-radius: 16px;
+    max-width: 65%;
+    min-width: 60px;
+    font-size: 13px;
+    line-height: 1.5;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+  }
+
+  .msg.user {
+    background: var(--violet);
+    color: white;
+    border-bottom-right-radius: 4px;
+  }
+
+  .msg.ai {
+    background: white;
+    color: var(--text);
+    border-bottom-left-radius: 4px;
+    box-shadow: 0 2px 12px rgba(124,58,237,0.09);
+    border: 1px solid var(--border);
+  }
+
+  .msg-time {
+    font-size: 11px;
+    color: #bbb;
+    margin-top: 4px;
+    padding: 0 4px;
+  }
+
+  /* BOTTOM — input + analyze + footer */
+/* BOTTOM — input + analyze + footer */
+  .bottom-area {
+    flex-shrink: 0;
+    background: white;
+    border-top: 1px solid #f0eeff;
+    padding: 10px 28px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .input-area {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .input-area input[type="text"] {
+    flex: 1;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1.5px solid var(--border);
+    outline: none;
+    font-family: 'Nunito', sans-serif;
+    font-size: 13px;
+    color: var(--text);
+    background: #faf9ff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .input-area input:focus {
+    border-color: var(--violet);
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+    background: white;
+  }
+
+  .send-btn {
+    padding: 10px 20px;
+    border: none;
+    background: var(--violet);
+    color: white;
+    border-radius: 12px;
+    cursor: pointer;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    transition: background 0.2s, transform 0.1s;
+    white-space: nowrap;
+  }
+
+  .send-btn:hover { background: var(--violet-dark); }
+  .send-btn:active { transform: scale(0.97); }
+
+  .analyze-btn {
+    width: 100%;
+    padding: 9px;
+    border: 1.5px solid var(--violet);
+    background: white;
+    color: var(--violet-dark);
+    border-radius: 12px;
+    cursor: pointer;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    transition: all 0.2s;
+  }
+
+  .analyze-btn:hover { background: var(--violet); color: white; }
+
+  .footer {
+    font-size: 10px;
+    color: #bbb;
+    text-align: center;
+  }
+</style>
+
+<div class="safa-wrapper">
+  <div class="card">
+
+    <!-- HEADER -->
+    <div class="card-header">
+      <div class="header-info">
+        <h1>Safa AI</h1>
+        <p><span class="online-dot"></span>Here to listen &amp; support you</p>
+      </div>
+      <a href="/safa_ai/new" class="new-chat-btn">+ New Chat</a>
+    </div>
+
+    <!-- CHAT BOX -->
+    <div class="chat-box" id="chatBox">
+      {% for sender, message, timestamp in chats %}
+        <div class="msg-row {{ sender }}">
+          <div class="avatar">{{ "🌿" if sender == "ai" else "🙂" }}</div>
+          <div>
+            <div class="msg {{ sender }}">{{ message }}</div>
+            <div class="msg-time">{{ timestamp[11:16] if timestamp and timestamp|length > 15 else "" }}</div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- INPUT + ANALYZE + FOOTER -->
+    <div class="bottom-area">
+
+      <form action="/safa_ai" method="POST">
+        <div class="input-area">
+          <input type="text" name="message" placeholder="Share how you're feeling..." autocomplete="off" required>
+          <button class="send-btn" type="submit">Send →</button>
+        </div>
+      </form>
+
+      <form action="/analyze_conversation" method="POST">
+        <button class="analyze-btn" type="submit">📊 Analyze Conversation</button>
+      </form>
+
+      <div class="footer">Educational tool only – not a substitute for professional mental health care</div>
+
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const chatBox = document.getElementById("chatBox");
+  if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
+</script>
+
+{% endblock %}

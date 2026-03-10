@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="analyzer-wrapper">
+
+<div class="card">
+
+<h1>SAFA AI Depression Detection</h1>
+
+<p class="subtitle">
+AI-powered emotional analysis using NLP and behavioral signals
+</p>
+
+<form action="/analyze" method="POST">
+
+<textarea
+name="message"
+placeholder="Describe how you are feeling today..."
+required>
+</textarea>
+
+<button type="submit">Run AI Analysis</button>
+
+</form>
+
+{% if risk %}
+
+<div class="result {{ risk|lower }}">
+
+<h3>Risk Level: {{ risk }}</h3>
+
+<p>Sentiment: {{ sentiment }}</p>
+
+<p>Probability: {{ percentage }}%</p>
+
+<div class="progress">
+
+<div class="progress-bar" id="bar"></div>
+
+</div>
+
+</div>
+
+<script>
+const percent = parseFloat("{{ percentage }}");
+const bar = document.getElementById("bar");
+bar.style.width = percent + "%";
+bar.textContent = percent + "%";
+</script>
+
+{% endif %}
+
+<div class="footer">
+Educational AI tool. Not a clinical diagnosis.
+</div>
+
+</div>
+
+</div>
+
+{% endblock %}

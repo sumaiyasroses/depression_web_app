@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>Safa AI</title>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+
+<body>
+
+<!-- NAVBAR -->
+
+<div class="navbar">
+
+<div class="logo">
+<b>Safa AI</b>
+</div>
+
+<div class="nav-links">
+
+<a href="/dashboard">Dashboard</a>
+
+<a href="/chats">Chats</a>
+
+<a href="/safa_ai">Safa AI</a>
+
+<a href="/logout">Logout</a>
+
+</div>
+
+</div>
+
+<!-- PAGE CONTENT -->
+
+{% block content %}
+
+{% endblock %}
+
+</body>
+</html>

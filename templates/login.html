@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Login – Safa AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700&family=Lora:wght@600&display=swap" rel="stylesheet">
+<style>
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: 'Nunito', sans-serif;
+    background: #f7f5ff;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.card {
+    background: white;
+    border-radius: 20px;
+    padding: 40px 36px;
+    width: 380px;
+    box-shadow: 0 20px 60px rgba(124, 58, 237, 0.12);
+}
+
+.logo {
+    text-align: center;
+    margin-bottom: 28px;
+}
+
+.logo h1 {
+    font-family: 'Lora', serif;
+    color: #7c3aed;
+    font-size: 26px;
+    margin-bottom: 4px;
+}
+
+.logo p {
+    font-size: 13px;
+    color: #aaa;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 6px;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 12px;
+    font-family: 'Nunito', sans-serif;
+    font-size: 14px;
+    color: #1e1b4b;
+    background: #faf9ff;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-group input:focus {
+    border-color: #7c3aed;
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+    background: white;
+}
+
+.form-group input::placeholder { color: #ccc; }
+
+.submit-btn {
+    width: 100%;
+    padding: 13px;
+    background: #7c3aed;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-family: 'Nunito', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: background 0.2s, transform 0.1s;
+}
+
+.submit-btn:hover { background: #5b21b6; }
+.submit-btn:active { transform: scale(0.98); }
+
+.bottom-link {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 13px;
+    color: #aaa;
+}
+
+.bottom-link a {
+    color: #7c3aed;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.bottom-link a:hover { text-decoration: underline; }
+
+</style>
+</head>
+<body>
+
+<div class="card">
+    <div class="logo">
+        <h1>Safa AI</h1>
+        <p>Welcome back 🌿</p>
+    </div>
+
+    <form method="POST">
+        <div class="form-group">
+            <label>Username</label>
+            <input type="text" name="username" placeholder="Enter your username" required>
+        </div>
+        <div class="form-group">
+            <label>Password</label>
+            <input type="password" name="password" placeholder="Enter your password" required>
+        </div>
+        <button class="submit-btn" type="submit">Login</button>
+    </form>
+
+    <div class="bottom-link">
+        Don't have an account? <a href="/register">Create one</a>
+    </div>
+</div>
+
+</body>
+</html>
