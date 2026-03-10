@@ -192,7 +192,9 @@ body {
     color: #dc2626;
     border-color: #fecaca;
 }
-
+.badge-high     { background:#fef2f2; color:#dc2626; }
+.badge-moderate { background:#fffbeb; color:#d97706; }
+.badge-low      { background:#f0fdf4; color:#16a34a; }
 </style>
 
 <div class="dashboard">
@@ -243,19 +245,38 @@ body {
             </div>
         </div>
     </div>
-
-    <div class="section-title">Behavioral Insights</div>
-    <div class="insights-card">
-        <div class="insight-row">
-            <div class="insight-key">Analysis Summary</div>
-            <div class="insight-val">{{ analysis_summary }}</div>
-        </div>
-        <div class="insight-row">
-            <div class="insight-key">Guidance</div>
-            <div class="insight-val">{{ guidance }}</div>
-        </div>
+<div class="section-title">Behavioral Insights</div>
+<div class="insights-card">
+    <div class="insight-row">
+        <div class="insight-key">Analysis Summary</div>
+        <div class="insight-val">{{ analysis_summary }}</div>
+    </div>
+    <div class="insight-row">
+        <div class="insight-key">Guidance</div>
+        <div class="insight-val">{{ guidance }}</div>
     </div>
 
+{% if safa_summary %}
+<div class="insight-row">
+    <div class="insight-key">SAFA Chat Risk</div>
+    <div class="insight-val">
+        <span class="risk-badge badge-{{ safa_level | lower | replace(' risk','') | replace(' ','') }}">
+            {{ safa_level }}
+        </span>
+        &nbsp;{{ safa_risk }}%
+    </div>
+</div>
+<div class="insight-row">
+    <div class="insight-key">SAFA Summary</div>
+    <div class="insight-val">{{ safa_summary }}</div>
+</div>
+<div class="insight-row">
+    <div class="insight-key">SAFA Guidance</div>
+    <div class="insight-val">{{ safa_guidance }}</div>
+</div>
+{% endif %}
+
+</div>
     <a href="/logout" class="logout-btn">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
