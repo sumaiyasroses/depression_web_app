@@ -15,8 +15,9 @@ from nlp.interaction_features import (
 )
 from groq import Groq
 import os
-
-GROQ_CLIENT = Groq(api_key="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")
+from dotenv import load_dotenv
+load_dotenv()
+GROQ_CLIENT = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 
@@ -254,7 +255,7 @@ def dashboard():
 
 
 # -------------------------
-# ANALYZE (example placeholder)
+# ANALYZE 
 # -------------------------
 @app.route("/analyze", methods=["POST"])
 def analyze():
