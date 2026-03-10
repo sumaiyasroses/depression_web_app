@@ -24,8 +24,6 @@ Real-Time Web Interface – Simple Flask-based frontend for interactive analysis
 
 **ML Models**: Logistic Regression, Random Forest
 
-**RAG Module**: Sentence-BERT embeddings + FAISS
-
 **Frontend**: HTML, CSS, JS
 
 **Database**: SQLite3
