@@ -13,7 +13,10 @@ from nlp.interaction_features import (
     calculate_late_night_usage,
     calculate_behavioral_risk
 )
+from groq import Groq
+import os
 
+GROQ_CLIENT = Groq(api_key="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")
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 
@@ -202,6 +205,27 @@ def dashboard():
     late_night_percent = round(late_night_ratio * 100, 2)
     day_percent = 100 - late_night_percent
 
+
+    # Fetch latest SAFA analysis
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS safa_analysis (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER, risk_score REAL,
+            risk_level TEXT, summary TEXT,
+            guidance TEXT, timestamp TEXT
+        )
+    """)
+    cursor.execute("""
+        SELECT risk_score, risk_level, summary, guidance
+        FROM safa_analysis WHERE user_id=? ORDER BY id DESC LIMIT 1
+    """, (user_id,))
+    safa_row     = cursor.fetchone()
+    safa_risk    = round(safa_row[0], 2) if safa_row else None
+    safa_level   = safa_row[1]           if safa_row else None
+    safa_summary = safa_row[2]           if safa_row else None
+    safa_guidance= safa_row[3]           if safa_row else None
+
+
     conn.close()
 
 
@@ -220,13 +244,17 @@ def dashboard():
         risk_values=risk_values,
         late_night_percent=late_night_percent,
         day_percent=day_percent,
+        safa_risk=safa_risk,
+        safa_level=safa_level,
+        safa_summary=safa_summary,
+        safa_guidance=safa_guidance,
 
     )
 
 
 
 # -------------------------
-# ANALYZE (example placeholder)
+# ANALYZE 
 # -------------------------
 @app.route("/analyze", methods=["POST"])
 def analyze():
@@ -402,9 +430,69 @@ def chats():
     )
 
 # -------------------------
-# SAFA AI-----------------
+# SAFA AI REPLY------------
 # -------------------------
 
+def get_safa_reply(history):
+    system_prompt = """You are SAFA, a warm and empathetic AI mental-health companion.
+Your rules:
+- Make the user feel heard and safe
+- Ask ONE thoughtful follow-up question per reply based on what they just said
+- Keep replies SHORT (2-3 sentences max)
+- Never repeat the same question or phrase from earlier in the conversation
+- Do NOT diagnose or give medical advice
+- If distress seems severe, gently suggest speaking with a professional
+"""
+    messages = [{"role": "system", "content": system_prompt}] + history
+
+    response = GROQ_CLIENT.chat.completions.create(
+        model="llama-3.3-70b-versatile",  # ← change this
+        messages=messages,
+        max_tokens=200,
+        temperature=0.8,
+        timeout=30  
+
+    )
+    return response.choices[0].message.content.strip()
+
+
+
+# -------------------------
+# GET SAFA ANALYSIS--------
+# -------------------------
+def get_safa_analysis(conversation_text):
+    import json
+    prompt = f"""Analyse this mental health support conversation and return ONLY a JSON object with these exact keys:
+- "risk_level": one of "High Risk", "Moderate Risk", or "Low Risk"
+- "risk_score": a number between 0 and 100
+- "summary": 1-2 sentences describing the emotional patterns you observed
+- "guidance": 1-2 sentences of supportive actionable advice for this person
+
+Conversation:
+{conversation_text}
+
+Return ONLY the JSON object. No explanation, no markdown, no extra text."""
+
+    for attempt in range(3):  # retry up to 3 times
+        try:
+            response = GROQ_CLIENT.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=300,
+                temperature=0.3,
+                timeout=30
+            )
+            raw = response.choices[0].message.content.strip()
+            raw = raw.replace("```json", "").replace("```", "").strip()
+            return json.loads(raw)
+        except Exception as e:
+            print(f"[Analysis attempt {attempt+1} failed] {e}")
+            if attempt == 2:
+                raise
+
+# -------------------------
+# SAFA AI-----------------
+# -------------------------
 
 @app.route("/safa_ai", methods=["GET", "POST"])
 def safa_ai():
@@ -419,10 +507,10 @@ def safa_ai():
     conn = sqlite3.connect("database.db")
     cursor = conn.cursor()
 
-    ist = pytz.timezone("Asia/Kolkata")
-    user_id = session["user_id"]
+    ist      = pytz.timezone("Asia/Kolkata")
+    user_id  = session["user_id"]
 
-    # Insert first AI message if chat is empty
+    # ── Insert opening message if chat is completely empty ──────────────────
     cursor.execute("""
         SELECT COUNT(*) FROM ai_chat
         WHERE user_id=? AND contact_name='SAFA'
@@ -430,120 +518,117 @@ def safa_ai():
     count = cursor.fetchone()[0]
 
     if count == 0:
-        first_message = "Hi, I'm SAFA. I'm here to listen. How have you been feeling lately?"
+        opening = "Hi, I'm SAFA 🌿 I'm here to listen without judgment. How have you been feeling lately?"
         cursor.execute("""
             INSERT INTO ai_chat (user_id, contact_name, sender, message, timestamp)
-            VALUES (?, ?, ?, ?, ?)
-        """, (user_id, "SAFA", "ai", first_message,
-              datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")))
+            VALUES (?, 'SAFA', 'ai', ?, ?)
+        """, (user_id, opening, datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")))
         conn.commit()
 
-    # Handle user message
+    # ── Handle new user message ─────────────────────────────────────────────
     if request.method == "POST":
 
-        message = request.form["message"]
-        timestamp = datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")
+        user_message = request.form["message"].strip()
+        if not user_message:
+            conn.close()
+            return redirect(url_for("safa_ai"))
 
-        # ML prediction
-        X = vectorizer.transform([message])
-        prob = model.predict_proba(X)[0][1]
+        now_str = datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")
+
+        # ML risk scoring (kept from original)
+        X          = vectorizer.transform([user_message])
+        prob       = model.predict_proba(X)[0][1]
         risk_score = round(prob * 100, 2)
 
         behavior_risk = calculate_behavioral_risk(user_id)
-        final_risk = min(risk_score + behavior_risk, 100)
+        final_risk    = min(risk_score + behavior_risk, 100)
 
-        # Save to interactions
         cursor.execute("""
             INSERT INTO interactions (user_id, message, risk_score, timestamp)
             VALUES (?, ?, ?, ?)
-        """, (user_id, message, final_risk, timestamp))
+        """, (user_id, user_message, final_risk, now_str))
 
         # Save user message
         cursor.execute("""
             INSERT INTO ai_chat (user_id, contact_name, sender, message, timestamp)
-            VALUES (?, ?, ?, ?, ?)
-        """, (user_id, "SAFA", "user", message, timestamp))
-
+            VALUES (?, 'SAFA', 'user', ?, ?)
+        """, (user_id, user_message, now_str))
         conn.commit()
 
-        # Fetch last 20 messages
+        # ── Build conversation history for Claude ───────────────────────────
         cursor.execute("""
-            SELECT sender, message
-            FROM ai_chat
+            SELECT sender, message FROM ai_chat
             WHERE user_id=? AND contact_name='SAFA'
-            ORDER BY id DESC
-            LIMIT 20
+            ORDER BY id ASC
         """, (user_id,))
-        history = cursor.fetchall()
-        history.reverse()
+        rows = cursor.fetchall()
 
-        conversation = ""
-        for sender, msg in history:
-            if sender == "user":
-                conversation += f"User: {msg}\n"
+        # Map "ai" → "assistant" for Anthropic API
+        claude_history = []
+        for sender, msg in rows:
+            role = "assistant" if sender == "ai" else "user"
+            # Merge consecutive same-role messages (API requires alternating)
+            if claude_history and claude_history[-1]["role"] == role:
+                claude_history[-1]["content"] += "\n" + msg
             else:
-                conversation += f"SAFA: {msg}\n"
+                claude_history.append({"role": role, "content": msg})
 
-        system_prompt = """
-You are SAFA, a compassionate AI mental health assistant.
-
-Rules:
-- Be empathetic and supportive
-- Keep replies short (1–2 sentences)
-- Ask one gentle follow-up question
-- Focus on emotional wellbeing
-"""
-
-        prompt = system_prompt + "\n" + conversation + "SAFA:"
-
-        # Generate AI reply
-        input_ids = tokenizer.encode(prompt + tokenizer.eos_token, return_tensors="pt")
-
-        output = model_ai.generate(
-            input_ids,
-            max_new_tokens=80,
-            pad_token_id=tokenizer.eos_token_id,
-            do_sample=True,
-            top_k=40,
-            top_p=0.9,
-            temperature=0.7
-        )
-
-        reply = tokenizer.decode(
-            output[0][input_ids.shape[-1]:],
-            skip_special_tokens=True
-        ).strip()
-
-        if reply == "":
-            reply = "I'm here with you. Can you tell me more about how you're feeling?"
+        # ── Get Claude reply ────────────────────────────────────────────────
+        try:
+            reply = get_safa_reply(claude_history)
+        except Exception as e:
+            reply = "I'm here with you. Could you tell me a little more about what you're experiencing?"
+            print(f"[SAFA AI error] {e}")
 
         # Save AI reply
         cursor.execute("""
             INSERT INTO ai_chat (user_id, contact_name, sender, message, timestamp)
-            VALUES (?, ?, ?, ?, ?)
-        """, (user_id, "SAFA", "ai", reply,
-              datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")))
-
+            VALUES (?, 'SAFA', 'ai', ?, ?)
+        """, (user_id, reply, datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")))
         conn.commit()
 
-    # Fetch full chat
+    # ── Fetch full chat to render ───────────────────────────────────────────
     cursor.execute("""
         SELECT sender, message, timestamp
         FROM ai_chat
         WHERE user_id=? AND contact_name='SAFA'
         ORDER BY timestamp ASC
     """, (user_id,))
-
     chats = cursor.fetchall()
 
     conn.close()
+    return render_template("safa_ai.html", chats=chats)
 
-    return render_template("safa_ai.html", messages=chats)
 
 # -------------------------
-# SAFA AI CHAT ANALYSIS
+# SAFA CHAT CLEAR HISTORY--
 # -------------------------
 
+@app.route("/safa_ai/new", methods=["GET"])
+def safa_ai_new():
+
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    import sqlite3
+
+    conn   = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        DELETE FROM ai_chat
+        WHERE user_id=? AND contact_name='SAFA'
+    """, (session["user_id"],))
+    conn.commit()
+    conn.close()
+
+    return redirect(url_for("safa_ai"))
+
+
+
+# -------------------------
+# SAFA ANALYSIS-------------
+# -------------------------
 @app.route("/analyze_conversation", methods=["POST"])
 def analyze_conversation():
 
@@ -551,53 +636,79 @@ def analyze_conversation():
         return redirect(url_for("login"))
 
     import sqlite3
+    from datetime import datetime
+    import pytz
 
     conn = sqlite3.connect("database.db")
     cursor = conn.cursor()
-
     user_id = session["user_id"]
+    ist = pytz.timezone("Asia/Kolkata")
 
+    # Get full conversation
     cursor.execute("""
-        SELECT message
-        FROM ai_chat
-        WHERE user_id=? AND contact_name='SAFA' AND sender='user'
+        SELECT sender, message FROM ai_chat
+        WHERE user_id=? AND contact_name='SAFA'
+        ORDER BY id ASC
     """, (user_id,))
-
     rows = cursor.fetchall()
 
     if not rows:
         conn.close()
         return redirect(url_for("safa_ai"))
 
-    full_text = " ".join([r[0] for r in rows])
+    # Build readable text for Claude
+    conversation_text = ""
+    for sender, msg in rows:
+        label = "SAFA" if sender == "ai" else "User"
+        conversation_text += f"{label}: {msg}\n"
 
-    X = vectorizer.transform([full_text])
-    prob = model.predict_proba(X)[0][1]
+    # Claude analyses it
+    try:
+        analysis  = get_safa_analysis(conversation_text)
+        level     = analysis.get("risk_level", "Low Risk")
+        risk      = float(analysis.get("risk_score", 20))
+        summary   = analysis.get("summary", "No significant patterns detected.")
+        guidance  = analysis.get("guidance", "Continue practising self-care.")
+    except Exception as e:
+        import traceback
+        print(f"[Analysis error FULL]")
+        traceback.print_exc()
+        level, risk, summary, guidance = "Low Risk", 20.0, "Analysis unavailable.", "Take care of yourself."
+    
+    risk_class = "high" if "High" in level else ("moderate" if "Moderate" in level else "low")
+    now_str = datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")
 
-    risk_score = round(prob * 100, 2)
+    # Save to interactions
+    cursor.execute("""
+        INSERT INTO interactions (user_id, message, risk_score, timestamp)
+        VALUES (?, ?, ?, ?)
+    """, (user_id, "[SAFA Analysis]", risk, now_str))
 
-    behavior_risk = calculate_behavioral_risk(user_id)
-    post_risk = analyze_user_posts(user_id)
+    # Save to safa_analysis table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS safa_analysis (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER, risk_score REAL,
+            risk_level TEXT, summary TEXT,
+            guidance TEXT, timestamp TEXT
+        )
+    """)
+    cursor.execute("DELETE FROM safa_analysis WHERE user_id=?", (user_id,))
+    cursor.execute("""
+        INSERT INTO safa_analysis (user_id, risk_score, risk_level, summary, guidance, timestamp)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (user_id, risk, level, summary, guidance, now_str))
 
-    final_risk = min(risk_score + behavior_risk + post_risk, 100)
-
-    if final_risk > 70:
-        level = "High Risk"
-        risk_class = "high"
-    elif final_risk > 40:
-        level = "Moderate Risk"
-        risk_class = "moderate"
-    else:
-        level = "Low Risk"
-        risk_class = "low"
-
+    conn.commit()
     conn.close()
 
     return render_template(
         "analysis_result.html",
-        risk=final_risk,
+        risk=round(risk, 2),
         level=level,
-        risk_class=risk_class
+        risk_class=risk_class,
+        summary=summary,
+        guidance=guidance
     )
 
 
