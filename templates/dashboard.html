@@ -21,21 +21,22 @@ body {
     width: 100%;
 }
 
-.dash-header {
-    margin-bottom: 20px;
-}
+.dash-header { margin-bottom: 20px; }
+
 .dash-header h1 {
     font-size: 18px;
     font-weight: 600;
     color: #111;
     letter-spacing: -0.3px;
 }
+
 .dash-header p {
     font-size: 11px;
     color: #999;
     margin-top: 2px;
     font-family: 'DM Mono', monospace;
 }
+
 .dash-header span { color: #7c3aed; font-weight: 600; }
 
 .section-title {
@@ -47,8 +48,7 @@ body {
     margin-bottom: 10px;
 }
 
-/* ── Stat cards + everything uses same grid ── */
-.content-grid {
+.stats-row {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 10px;
@@ -74,6 +74,7 @@ body {
     text-transform: uppercase;
     letter-spacing: 0.6px;
 }
+
 .stat-value {
     font-size: 20px;
     font-weight: 600;
@@ -81,12 +82,15 @@ body {
     font-family: 'DM Mono', monospace;
     line-height: 1;
 }
+
 .stat-value.accent { color: #7c3aed; }
+
 .stat-sub {
     font-size: 9px;
     color: #ccc;
     font-family: 'DM Mono', monospace;
 }
+
 .risk-badge {
     display: inline-block;
     padding: 2px 8px;
@@ -94,11 +98,60 @@ body {
     font-size: 10px;
     font-weight: 600;
     font-family: 'DM Mono', monospace;
-    background: #ede9fe;
-    color: #7c3aed;
 }
 
-/* ── Charts row: same grid, chart cards span 2 cols each ── */
+.risk-badge.low  { background: #dcfce7; color: #16a34a; }
+.risk-badge.mod  { background: #ede9fe; color: #7c3aed; }
+.risk-badge.high { background: #fee2e2; color: #dc2626; }
+
+.period-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+.period-card {
+    background: #fff;
+    border: 1px solid #e8e8e8;
+    border-radius: 10px;
+    padding: 14px 16px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.period-label {
+    font-size: 9px;
+    font-weight: 600;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+}
+
+.period-score {
+    font-size: 22px;
+    font-weight: 600;
+    font-family: 'DM Mono', monospace;
+    color: #7c3aed;
+    line-height: 1;
+}
+
+.period-bar-bg {
+    width: 100%;
+    height: 4px;
+    background: #f0f0f0;
+    border-radius: 4px;
+}
+
+.period-bar-fill {
+    height: 4px;
+    border-radius: 4px;
+    transition: width 0.6s ease;
+}
+
 .charts-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -125,6 +178,7 @@ body {
     align-items: center;
     gap: 7px;
 }
+
 .card-title::before {
     content: '';
     width: 7px;
@@ -134,20 +188,19 @@ body {
     flex-shrink: 0;
 }
 
-/* Canvas containers — fixed equal height */
 .chart-wrap {
     width: 100%;
     height: 220px;
     position: relative;
 }
 
-/* ── Insights card: full width ── */
 .insights-card {
     background: #fff;
     border: 1px solid #e8e8e8;
     border-radius: 10px;
     padding: 16px 18px;
-    margin-bottom: 16px;
+    margin-bottom: 10px;
+    width: 100%;
 }
 
 .insight-row {
@@ -156,7 +209,9 @@ body {
     display: flex;
     gap: 16px;
 }
+
 .insight-row:last-child { border-bottom: none; }
+
 .insight-key {
     font-size: 10px;
     color: #aaa;
@@ -166,11 +221,58 @@ body {
     min-width: 150px;
     padding-top: 1px;
 }
+
 .insight-val {
     font-size: 12px;
     color: #333;
     line-height: 1.5;
     flex: 1;
+}
+
+.safa-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.safa-entry {
+    background: #fff;
+    border: 1px solid #e8e8e8;
+    border-radius: 10px;
+    padding: 14px 18px;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    min-width: 0;
+}
+
+.safa-meta {
+    min-width: 130px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.safa-time {
+    font-size: 10px;
+    color: #bbb;
+    font-family: 'DM Mono', monospace;
+}
+
+.safa-content { flex: 1; min-width: 0; }
+
+.safa-summary-text {
+    font-size: 12px;
+    color: #333;
+    line-height: 1.5;
+    margin-bottom: 4px;
+}
+
+.safa-guidance-text {
+    font-size: 11px;
+    color: #999;
+    line-height: 1.4;
 }
 
 .logout-btn {
@@ -187,14 +289,13 @@ body {
     text-decoration: none;
     transition: background 0.15s, color 0.15s;
 }
+
 .logout-btn:hover {
     background: #fef2f2;
     color: #dc2626;
     border-color: #fecaca;
 }
-.badge-high     { background:#fef2f2; color:#dc2626; }
-.badge-moderate { background:#fffbeb; color:#d97706; }
-.badge-low      { background:#f0fdf4; color:#16a34a; }
+
 </style>
 
 <div class="dashboard">
@@ -205,7 +306,7 @@ body {
     </div>
 
     <div class="section-title">Overview</div>
-    <div class="content-grid">
+    <div class="stats-row">
         <div class="stat-card">
             <div class="stat-label">Interactions</div>
             <div class="stat-value">{{ total_interactions }}</div>
@@ -224,10 +325,42 @@ body {
         <div class="stat-card">
             <div class="stat-label">Risk Level</div>
             <div class="stat-value" style="font-size:13px; padding-top:3px;">
-                <span class="risk-badge">{{ risk_level }}</span>
+                <span id="overall-badge" class="risk-badge">{{ risk_level }}</span>
             </div>
             <div class="stat-sub">score: {{ behavior_risk }}</div>
         </div>
+    </div>
+
+    <div class="section-title">Mental Health Periods</div>
+    <div class="period-row">
+
+        <div class="period-card">
+            <div class="period-label">Today</div>
+            <div class="period-score">{{ today_risk }}%</div>
+            <div class="period-bar-bg">
+                <div class="period-bar-fill" id="bar-today"></div>
+            </div>
+            <span class="risk-badge" id="badge-today">{{ today_level }}</span>
+        </div>
+
+        <div class="period-card">
+            <div class="period-label">Last 7 Days</div>
+            <div class="period-score">{{ week_risk }}%</div>
+            <div class="period-bar-bg">
+                <div class="period-bar-fill" id="bar-week"></div>
+            </div>
+            <span class="risk-badge" id="badge-week">{{ week_level }}</span>
+        </div>
+
+        <div class="period-card">
+            <div class="period-label">Last 30 Days</div>
+            <div class="period-score">{{ month_risk }}%</div>
+            <div class="period-bar-bg">
+                <div class="period-bar-fill" id="bar-month"></div>
+            </div>
+            <span class="risk-badge" id="badge-month">{{ month_level }}</span>
+        </div>
+
     </div>
 
     <div class="section-title">Behavior Analytics</div>
@@ -245,38 +378,47 @@ body {
             </div>
         </div>
     </div>
-<div class="section-title">Behavioral Insights</div>
-<div class="insights-card">
-    <div class="insight-row">
-        <div class="insight-key">Analysis Summary</div>
-        <div class="insight-val">{{ analysis_summary }}</div>
-    </div>
-    <div class="insight-row">
-        <div class="insight-key">Guidance</div>
-        <div class="insight-val">{{ guidance }}</div>
+
+    <div class="section-title">Behavioral Insights</div>
+    <div class="insights-card">
+        <div class="insight-row">
+            <div class="insight-key">Analysis Summary</div>
+            <div class="insight-val">{{ analysis_summary }}</div>
+        </div>
+        <div class="insight-row">
+            <div class="insight-key">Guidance</div>
+            <div class="insight-val">{{ guidance }}</div>
+        </div>
+        {% if safa_risk %}
+        <div class="insight-row">
+            <div class="insight-key">SAFA Chat Risk</div>
+            <div class="insight-val">
+                <span class="risk-badge" id="badge-safa">{{ safa_level }}</span>
+                &nbsp;{{ safa_risk }}%
+            </div>
+        </div>
+        {% endif %}
     </div>
 
-{% if safa_summary %}
-<div class="insight-row">
-    <div class="insight-key">SAFA Chat Risk</div>
-    <div class="insight-val">
-        <span class="risk-badge badge-{{ safa_level | lower | replace(' risk','') | replace(' ','') }}">
-            {{ safa_level }}
-        </span>
-        &nbsp;{{ safa_risk }}%
+    {% if recent_safa %}
+    <div class="section-title">Recent SAFA Analysis</div>
+    <div class="safa-list">
+        {% for entry in recent_safa %}
+        <div class="safa-entry">
+            <div class="safa-meta">
+                <div class="safa-time">{{ entry.timestamp }}</div>
+                <span class="risk-badge" data-score="{{ entry.risk_score }}">{{ entry.risk_level }}</span>
+                <div class="stat-sub">{{ entry.risk_score }}%</div>
+            </div>
+            <div class="safa-content">
+                <div class="safa-summary-text">{{ entry.summary }}</div>
+                <div class="safa-guidance-text">{{ entry.guidance }}</div>
+            </div>
+        </div>
+        {% endfor %}
     </div>
-</div>
-<div class="insight-row">
-    <div class="insight-key">SAFA Summary</div>
-    <div class="insight-val">{{ safa_summary }}</div>
-</div>
-<div class="insight-row">
-    <div class="insight-key">SAFA Guidance</div>
-    <div class="insight-val">{{ safa_guidance }}</div>
-</div>
-{% endif %}
+    {% endif %}
 
-</div>
     <a href="/logout" class="logout-btn">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -289,43 +431,90 @@ body {
 </div>
 
 <script>
-const dates = JSON.parse('{{ dates | tojson | safe }}');
-const riskValues = JSON.parse('{{ risk_values | tojson | safe }}');
-const formattedDates = dates.map(d => new Date(d).toLocaleDateString());
 
-const purple = '#7c3aed';
-const purpleLight = 'rgba(124,58,237,0.08)';
+function riskClass(score) {
+    if (score < 30) return 'low';
+    if (score < 60) return 'mod';
+    return 'high';
+}
+
+function riskColor(score) {
+    if (score < 30) return '#16a34a';
+    if (score < 60) return '#7c3aed';
+    return '#dc2626';
+}
+
+function applyBadge(id, score) {
+    var el = document.getElementById(id);
+    if (el) el.classList.add(riskClass(score));
+}
+
+function applyBar(id, score) {
+    var el = document.getElementById(id);
+    if (el) {
+        el.style.width = score + '%';
+        el.style.background = riskColor(score);
+    }
+}
+
+var todayRisk = parseFloat("{{ today_risk }}");
+var weekRisk  = parseFloat("{{ week_risk }}");
+var monthRisk = parseFloat("{{ month_risk }}");
+var avgRisk   = parseFloat("{{ avg_risk }}");
+var safaRisk  = parseFloat("{{ safa_risk if safa_risk else 0 }}");
+
+applyBadge('overall-badge', avgRisk);
+applyBar('bar-today', todayRisk);
+applyBadge('badge-today', todayRisk);
+applyBar('bar-week', weekRisk);
+applyBadge('badge-week', weekRisk);
+applyBar('bar-month', monthRisk);
+applyBadge('badge-month', monthRisk);
+
+var safaBadge = document.getElementById('badge-safa');
+if (safaBadge) applyBadge('badge-safa', safaRisk);
+
+document.querySelectorAll('[data-score]').forEach(function(el) {
+    var score = parseFloat(el.getAttribute('data-score'));
+    el.classList.add(riskClass(score));
+});
+
+var dates      = JSON.parse('{{ dates | tojson | safe }}');
+var riskValues = JSON.parse('{{ risk_values | tojson | safe }}');
+var segmentColors = riskValues.map(function(v) { return riskColor(v); });
 
 new Chart(document.getElementById("riskChart"), {
-    type: "line",
+    type: "bar",
     data: {
-        labels: formattedDates,
+        labels: dates,
         datasets: [{
             data: riskValues,
-            fill: true,
-            borderColor: purple,
-            backgroundColor: purpleLight,
-            borderWidth: 2,
-            tension: 0.4,
-            pointRadius: 2.5,
-            pointBackgroundColor: purple,
-            pointBorderColor: '#fff',
-            pointBorderWidth: 1.5
+            backgroundColor: segmentColors,
+            borderRadius: 4,
+            borderSkipped: false
         }]
     },
     options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                callbacks: {
+                    label: function(ctx) { return ctx.parsed.y + '%'; }
+                }
+            }
+        },
         scales: {
             y: {
-                min: 0, max: 100,
+                min: 0,
+                max: 100,
                 grid: { color: '#f5f5f5' },
                 border: { display: false },
                 ticks: {
                     font: { family: 'DM Mono', size: 9 },
                     color: '#ccc',
-                    callback: v => v + '%',
+                    callback: function(v) { return v + '%'; },
                     maxTicksLimit: 6
                 }
             },
@@ -343,8 +532,8 @@ new Chart(document.getElementById("riskChart"), {
     }
 });
 
-const night = JSON.parse('{{ late_night_percent | tojson | safe }}');
-const day = JSON.parse('{{ day_percent | tojson | safe }}');
+var night = parseFloat("{{ late_night_percent }}");
+var day   = parseFloat("{{ day_percent }}");
 
 new Chart(document.getElementById("sleepChart"), {
     type: "doughnut",
@@ -376,6 +565,7 @@ new Chart(document.getElementById("sleepChart"), {
         }
     }
 });
+
 </script>
 
 {% endblock %}

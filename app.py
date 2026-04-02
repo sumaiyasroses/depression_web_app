@@ -110,12 +110,6 @@ def logout():
 # -------------------------
 # DASHBOARD
 # -------------------------
-from behavior.behavior_analyzer import (
-    calculate_behavioral_risk,
-    calculate_late_night_usage,
-    get_user_activity
-)
-
 @app.route("/dashboard")
 def dashboard():
     if "user_id" not in session:
@@ -123,91 +117,99 @@ def dashboard():
 
     user_id = session["user_id"]
     history = get_user_history(user_id)
-    
 
     timestamps = get_user_activity(user_id)
     late_night_ratio = calculate_late_night_usage(timestamps)
     behavior_risk = calculate_behavioral_risk(user_id)
 
     import sqlite3
+    from datetime import datetime, timedelta
+
     conn = sqlite3.connect("database.db")
     cursor = conn.cursor()
 
-    cursor.execute("""
-        SELECT COUNT(*)
-        FROM interactions
-        WHERE user_id = ?
-    """, (user_id,))
+    now = datetime.now()
+    today_str = now.strftime("%Y-%m-%d")
+    week_ago = (now - timedelta(days=7)).strftime("%Y-%m-%d")
+    month_ago = (now - timedelta(days=30)).strftime("%Y-%m-%d")
 
+    # Total interactions
+    cursor.execute("SELECT COUNT(*) FROM interactions WHERE user_id = ?", (user_id,))
     total_interactions = cursor.fetchone()[0]
 
+    # Overall avg risk
+    cursor.execute("SELECT AVG(risk_score) FROM interactions WHERE user_id = ?", (user_id,))
+    avg_risk = round(cursor.fetchone()[0] or 0, 2)
+
+    # Today avg risk
     cursor.execute("""
-        SELECT AVG(risk_score)
+        SELECT AVG(risk_score) FROM interactions
+        WHERE user_id = ? AND DATE(timestamp) = ?
+    """, (user_id, today_str))
+    today_risk = round(cursor.fetchone()[0] or 0, 2)
+
+    # Last 7 days avg risk
+    cursor.execute("""
+        SELECT AVG(risk_score) FROM interactions
+        WHERE user_id = ? AND DATE(timestamp) >= ?
+    """, (user_id, week_ago))
+    week_risk = round(cursor.fetchone()[0] or 0, 2)
+
+    # Last 30 days avg risk
+    cursor.execute("""
+        SELECT AVG(risk_score) FROM interactions
+        WHERE user_id = ? AND DATE(timestamp) >= ?
+    """, (user_id, month_ago))
+    month_risk = round(cursor.fetchone()[0] or 0, 2)
+
+    def get_risk_level(score):
+        if score < 30:
+            return "Low Risk"
+        elif score < 60:
+            return "Moderate Risk"
+        else:
+            return "High Risk"
+
+    def get_summary_guidance(level):
+        if level == "Low Risk":
+            return (
+                "Emotional patterns look stable.",
+                "Maintain healthy routines and stay socially connected."
+            )
+        elif level == "Moderate Risk":
+            return (
+                "Some emotional distress patterns detected.",
+                "Take breaks, improve sleep, and talk to supportive people."
+            )
+        else:
+            return (
+                "Strong indicators of emotional distress detected.",
+                "Consider reaching out to a trusted person or mental health professional."
+            )
+
+    risk_level = get_risk_level(avg_risk)
+    analysis_summary, guidance = get_summary_guidance(risk_level)
+
+    today_level = get_risk_level(today_risk)
+    week_level  = get_risk_level(week_risk)
+    month_level = get_risk_level(month_risk)
+
+    # Chart data — grouped by date segments
+    cursor.execute("""
+        SELECT DATE(timestamp) as day, AVG(risk_score)
         FROM interactions
         WHERE user_id = ?
+        GROUP BY day
+        ORDER BY day ASC
     """, (user_id,))
-
-    avg_risk = cursor.fetchone()[0]
-
-    if avg_risk:
-        avg_risk = round(avg_risk, 2)
-    else:
-        avg_risk = 0
-    if avg_risk < 30:
-        risk_level = "Low Risk"
-
-    elif avg_risk < 60:
-        risk_level = "Moderate Risk"
-
-    else:
-        risk_level = "High Risk"
-
-    if risk_level == "Low Risk":
-        analysis_summary = "Your recent interactions show generally stable emotional patterns."
-        guidance = "Maintain healthy routines, stay socially connected, and continue positive activities."
-
-    elif risk_level == "Moderate Risk":
-        analysis_summary = "Some emotional distress patterns were detected in recent interactions."
-        guidance = "Consider taking breaks, improving sleep habits, and talking with supportive friends or family."
-
-    else:
-        analysis_summary = "Strong indicators of emotional distress were detected in recent interactions."
-        guidance = "Consider reaching out to trusted people or a mental health professional for support."
-
-
-    cursor.execute("""
-        SELECT timestamp, risk_score
-        FROM interactions
-        WHERE user_id = ?
-        ORDER BY timestamp ASC
-        """, (user_id,))
-
     rows = cursor.fetchall()
-
-    dates = [r[0] for r in rows]
-    risk_values = [r[1] for r in rows]
-
-    cursor.execute("""
-    SELECT timestamp, risk_score
-    FROM interactions
-    WHERE user_id = ?
-    ORDER BY timestamp
-""", (user_id,))
-
-    rows = cursor.fetchall()
-
-    dates = []
-    risk_values = []
-
-    for row in rows:
-        dates.append(row[0])
-        risk_values.append(row[1])
+    dates       = [r[0] for r in rows]
+    risk_values = [round(r[1], 2) for r in rows]
 
     late_night_percent = round(late_night_ratio * 100, 2)
     day_percent = 100 - late_night_percent
 
-
-    # Fetch latest SAFA analysis
+    # SAFA analysis — last 3 entries
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS safa_analysis (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -217,18 +219,32 @@ def dashboard():
         )
     """)
     cursor.execute("""
-        SELECT risk_score, risk_level, summary, guidance
-        FROM safa_analysis WHERE user_id=? ORDER BY id DESC LIMIT 1
+        SELECT risk_score, risk_level, summary, guidance, timestamp
+        FROM safa_analysis
+        WHERE user_id = ?
+        ORDER BY id DESC
+        LIMIT 3
     """, (user_id,))
-    safa_row     = cursor.fetchone()
-    safa_risk    = round(safa_row[0], 2) if safa_row else None
-    safa_level   = safa_row[1]           if safa_row else None
-    safa_summary = safa_row[2]           if safa_row else None
-    safa_guidance= safa_row[3]           if safa_row else None
+    safa_rows = cursor.fetchall()
 
+    # Latest single entry (for existing references)
+    safa_risk     = round(safa_rows[0][0], 2) if safa_rows else None
+    safa_level    = safa_rows[0][1]            if safa_rows else None
+    safa_summary  = safa_rows[0][2]            if safa_rows else None
+    safa_guidance = safa_rows[0][3]            if safa_rows else None
+
+    # Recent list for new UI
+    recent_safa = []
+    for row in safa_rows:
+        recent_safa.append({
+            "risk_score": round(row[0], 2),
+            "risk_level": row[1],
+            "summary":    row[2],
+            "guidance":   row[3],
+            "timestamp":  row[4]
+        })
 
     conn.close()
-
 
     return render_template(
         "dashboard.html",
@@ -249,10 +265,14 @@ def dashboard():
         safa_level=safa_level,
         safa_summary=safa_summary,
         safa_guidance=safa_guidance,
-
+        recent_safa=recent_safa,
+        today_risk=today_risk,
+        today_level=today_level,
+        week_risk=week_risk,
+        week_level=week_level,
+        month_risk=month_risk,
+        month_level=month_level,
     )
-
-
 
 # -------------------------
 # ANALYZE 
