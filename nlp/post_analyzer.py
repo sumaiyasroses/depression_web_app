@@ -1,3 +1,5 @@
+import nltk
+nltk.download('vader_lexicon')
 import sqlite3
 from datetime import datetime
 from nltk.sentiment import SentimentIntensityAnalyzer
