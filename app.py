@@ -6,7 +6,6 @@ from flask import Flask, render_template, request, redirect, url_for, session
 from werkzeug.security import generate_password_hash, check_password_hash
 from database import init_db
 from storage.interaction_store import add_message, get_user_history
-from behavior.behavior_analyzer import calculate_behavioral_risk
 from nlp.post_analyzer import analyze_user_posts
 from nlp.interaction_features import (
     get_user_activity,
@@ -16,21 +15,18 @@ from nlp.interaction_features import (
 from groq import Groq
 import os
 from dotenv import load_dotenv
+
 load_dotenv()
 GROQ_CLIENT = Groq(api_key=os.environ.get("GROQ_API_KEY"))
-from transformers import AutoModelForCausalLM, AutoTokenizer
-import torch
-
-tokenizer = AutoTokenizer.from_pretrained("microsoft/DialoGPT-small")
-model_ai = AutoModelForCausalLM.from_pretrained("microsoft/DialoGPT-small")
 
 model = joblib.load("ml/model.pkl")
 vectorizer = joblib.load("ml/vectorizer.pkl")
 
 app = Flask(__name__)
-app.secret_key = "super_secret_key"  # change this in production
+app.secret_key = "super_secret_key"
 DB_NAME = "database.db"
 
+init_db()
 
 # -------------------------
 # HOME ROUTE

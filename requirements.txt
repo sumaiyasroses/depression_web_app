@@ -23,7 +23,5 @@ scipy
 six
 SQLAlchemy
 textblob
-transformers
-torch
 vaderSentiment
 Werkzeug
