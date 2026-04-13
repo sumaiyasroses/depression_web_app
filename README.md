@@ -1,5 +1,6 @@
 
 # AI-Driven Depression Detection Platform
+# LINK - https://safa-depression-detector.onrender.com/login
 
 A web-based platform that leverages AI to assess potential depression risk from user social interaction data. It combines NLP, Machine Learning, and a RAG (Retrieval-Augmented Generation) module to provide safe, knowledge-backed insights.
 
